@@ -28,8 +28,8 @@ export interface GameStateResponse {
   isOver: boolean;
   multiplier: number;
   serverSeedHash: string;
-  // Included only when game is over
   serverSeed?: string;
+  // Included only when game is over
   bombs?: number[];
   winAmount?: number;
 }
@@ -90,6 +90,7 @@ export async function startGameAction(betAmount: number, mineCount: number, clie
         isOver: false,
         multiplier: 1.0,
         serverSeedHash,
+        serverSeed,
       }
     };
 
@@ -154,10 +155,10 @@ export async function revealTileAction(token: string, tileIndex: number): Promis
       isOver,
       multiplier: newMultiplier,
       serverSeedHash: hashSeed(payload.serverSeed),
+      serverSeed: payload.serverSeed,
     };
 
     if (isOver) {
-      response.serverSeed = payload.serverSeed;
       response.bombs = payload.bombs;
 
       if (!isBomb) {

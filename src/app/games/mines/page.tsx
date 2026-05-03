@@ -156,18 +156,33 @@ export default function MinesPage() {
 
           {/* Active Game Hash Display */}
           {isPlaying && (
-            <div className="absolute top-4 left-4 right-4 flex justify-between items-center bg-zinc-950/80 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400 z-10 shadow-lg">
-               <div className="flex items-center gap-2 overflow-hidden">
-                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                 <span className="truncate max-w-[180px] md:max-w-md">Hash: {gameState.serverSeedHash}</span>
-               </div>
-               <button
-                 onClick={() => copyToClipboard(gameState.serverSeedHash, setCopiedHash)}
-                 className="ml-2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-300 transition-colors shrink-0"
-                 title="Copy Server Seed Hash"
-               >
-                 {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-               </button>
+            <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 z-10">
+              <div className="flex justify-between items-center bg-zinc-950/80 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400 shadow-lg">
+                 <div className="flex items-center gap-2 overflow-hidden">
+                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                   <span className="truncate max-w-[180px] md:max-w-md">Hash: {gameState.serverSeedHash}</span>
+                 </div>
+                 <button
+                   onClick={() => copyToClipboard(gameState.serverSeedHash, setCopiedHash)}
+                   className="ml-2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-300 transition-colors shrink-0"
+                   title="Copy Server Seed Hash"
+                 >
+                   {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                 </button>
+              </div>
+              <div className="flex justify-between items-center bg-zinc-950/80 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400 shadow-lg">
+                 <div className="flex items-center gap-2 overflow-hidden">
+                   <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+                   <span className="truncate max-w-[180px] md:max-w-md">Seed: {gameState.serverSeed}</span>
+                 </div>
+                 <button
+                   onClick={() => copyToClipboard(gameState.serverSeed || '', setCopiedSeed)}
+                   className="ml-2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-300 transition-colors shrink-0"
+                   title="Copy Un-Hashed Server Seed"
+                 >
+                   {copiedSeed ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                 </button>
+              </div>
             </div>
           )}
 
