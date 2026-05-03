@@ -105,3 +105,68 @@ export function generateDiceRoll(
 
   return finalRoll;
 }
+
+/**
+ * Generates a Crash Multiplier based on provably fair algorithm.
+ * Based on standard Crash math: E = 2^52, H = hash(serverSeed),
+ * Result = Math.max(1.00, Math.floor(E / (E - H)) * 0.99)
+ *
+ * @param serverSeed The server's secret seed.
+ * @param clientSeed The client's seed.
+ * @param nonce The game nonce.
+ * @returns A multiplier (minimum 1.00).
+ */
+export function generateCrashMultiplier(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number
+): number {
+  const message = `${clientSeed}:${nonce}:0`;
+  const hash = CryptoJS.HmacSHA256(message, serverSeed).toString(CryptoJS.enc.Hex);
+
+  // Take first 52 bits (13 hex chars)
+  const hexChunk = hash.substring(0, 13);
+  const h = parseInt(hexChunk, 16);
+  const e = Math.pow(2, 52);
+
+  // Instacrash check (if h % 33 == 0, 1% house edge guaranteed to crash at 1.00)
+  // Let's use standard Stake formula (99% RTP):
+  if (h % 33 === 0) return 1.00;
+
+  let multiplier = Math.floor((100 * e - h) / (e - h)) / 100;
+
+  return Math.max(1.00, multiplier);
+}
+
+/**
+ * Generates a Plinko Path based on provably fair algorithm.
+ *
+ * @param serverSeed The server's secret seed.
+ * @param clientSeed The client's seed.
+ * @param nonce The game nonce.
+ * @param rows Number of rows (8-16).
+ * @returns An array of binary decisions (0 for Left, 1 for Right).
+ */
+export function generatePlinkoPath(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+  rows: number
+): number[] {
+  const message = `${clientSeed}:${nonce}:0`;
+  const hash = CryptoJS.HmacSHA256(message, serverSeed).toString(CryptoJS.enc.Hex);
+
+  const path: number[] = [];
+
+  // We need `rows` number of boolean decisions. We can use 1 hex char (4 bits) per row.
+  for (let i = 0; i < rows; i++) {
+    const hexChar = hash.charAt(i);
+    const intVal = parseInt(hexChar, 16);
+
+    // Convert 0-15 to 0 or 1.
+    // If < 8, Left (0). If >= 8, Right (1).
+    path.push(intVal < 8 ? 0 : 1);
+  }
+
+  return path;
+}

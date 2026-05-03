@@ -2,7 +2,7 @@
 
 import { Header } from '@/components/Header';
 import Link from 'next/link';
-import { Bomb, Dices, Play } from 'lucide-react';
+import { Bomb, Dices, TrendingUp, Pyramid, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Home() {
