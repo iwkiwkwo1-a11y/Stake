@@ -63,15 +63,49 @@ export default function Home() {
               </motion.div>
             </Link>
 
-            <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl overflow-hidden opacity-50 cursor-not-allowed">
-              <div className="aspect-video bg-zinc-800/50 flex items-center justify-center">
-                 <span className="text-zinc-600 font-semibold">Coming Soon</span>
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-zinc-400">Plinko</h3>
-                <p className="text-sm text-zinc-500 mt-1">Originals</p>
-              </div>
-            </div>
+            <Link href="/games/plinko">
+              <motion.div
+                whileHover={{ y: -5 }}
+                className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group cursor-pointer"
+              >
+                <div className="aspect-video bg-zinc-800 relative flex items-center justify-center overflow-hidden">
+                   <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-zinc-900/20 z-0" />
+                   <Pyramid className="w-16 h-16 text-amber-500 z-10 group-hover:scale-110 transition-transform" />
+
+                   <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
+                      <div className="bg-amber-500 text-zinc-950 rounded-full p-3 shadow-lg">
+                        <Play className="w-6 h-6 fill-current" />
+                      </div>
+                   </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-zinc-100">Plinko</h3>
+                  <p className="text-sm text-zinc-400 mt-1">Provably Fair Original</p>
+                </div>
+              </motion.div>
+            </Link>
+
+            <Link href="/games/crash">
+              <motion.div
+                whileHover={{ y: -5 }}
+                className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden group cursor-pointer"
+              >
+                <div className="aspect-video bg-zinc-800 relative flex items-center justify-center overflow-hidden">
+                   <div className="absolute inset-0 bg-gradient-to-br from-rose-500/20 to-zinc-900/20 z-0" />
+                   <TrendingUp className="w-16 h-16 text-rose-500 z-10 group-hover:scale-110 transition-transform" />
+
+                   <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
+                      <div className="bg-rose-500 text-zinc-950 rounded-full p-3 shadow-lg">
+                        <Play className="w-6 h-6 fill-current" />
+                      </div>
+                   </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-bold text-zinc-100">Crash</h3>
+                  <p className="text-sm text-zinc-400 mt-1">Provably Fair Original</p>
+                </div>
+              </motion.div>
+            </Link>
           </div>
         </section>
 
