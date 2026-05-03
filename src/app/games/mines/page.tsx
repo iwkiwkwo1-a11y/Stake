@@ -4,9 +4,23 @@ import { Header } from '@/components/Header';
 import { useMinesGame } from '@/hooks/useMinesGame';
 import { useWallet } from '@/components/WalletProvider';
 import { motion } from 'framer-motion';
-import { Bomb, Gem, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Bomb, Gem, ShieldCheck, ShieldAlert, Copy, Check } from 'lucide-react';
+import { useState } from 'react';
 
 export default function MinesPage() {
+  const [copiedHash, setCopiedHash] = useState(false);
+  const [copiedSeed, setCopiedSeed] = useState(false);
+  const [copiedClient, setCopiedClient] = useState(false);
+
+  const copyToClipboard = async (text: string, setCopiedState: (val: boolean) => void) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedState(true);
+      setTimeout(() => setCopiedState(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
   const { balance } = useWallet();
   const {
     gameState,
@@ -114,14 +128,25 @@ export default function MinesPage() {
           {!isPlaying && (
             <div className="mt-auto pt-4 border-t border-zinc-800 flex flex-col gap-2">
                <label className="text-xs font-semibold text-zinc-500">Client Seed (Provably Fair)</label>
-               <input
-                 type="text"
-                 value={clientSeed}
-                 onChange={(e) => setClientSeed(e.target.value)}
-                 disabled={isPlaying || loading}
-                 placeholder="Leave empty to auto-generate"
-                 className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-300 outline-none focus:border-emerald-500"
-               />
+               <div className="flex bg-zinc-950 border border-zinc-800 rounded-md overflow-hidden focus-within:border-emerald-500 transition-colors">
+                 <input
+                   type="text"
+                   value={clientSeed}
+                   onChange={(e) => setClientSeed(e.target.value)}
+                   disabled={isPlaying || loading}
+                   placeholder="Leave empty to auto-generate"
+                   className="w-full bg-transparent px-3 py-2 text-xs text-zinc-300 outline-none disabled:opacity-50"
+                 />
+                 {clientSeed && (
+                   <button
+                     onClick={() => copyToClipboard(clientSeed, setCopiedClient)}
+                     className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border-l border-zinc-700 transition-colors flex items-center justify-center"
+                     title="Copy Client Seed"
+                   >
+                     {copiedClient ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                   </button>
+                 )}
+               </div>
             </div>
           )}
         </div>
@@ -131,11 +156,18 @@ export default function MinesPage() {
 
           {/* Active Game Hash Display */}
           {isPlaying && (
-            <div className="absolute top-4 left-4 right-4 flex justify-between items-center bg-zinc-950/50 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400">
-               <div className="flex items-center gap-2">
-                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                 <span className="truncate max-w-[200px] md:max-w-md">Hash: {gameState.serverSeedHash}</span>
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-center bg-zinc-950/80 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400 z-10 shadow-lg">
+               <div className="flex items-center gap-2 overflow-hidden">
+                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                 <span className="truncate max-w-[180px] md:max-w-md">Hash: {gameState.serverSeedHash}</span>
                </div>
+               <button
+                 onClick={() => copyToClipboard(gameState.serverSeedHash, setCopiedHash)}
+                 className="ml-2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-300 transition-colors shrink-0"
+                 title="Copy Server Seed Hash"
+               >
+                 {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+               </button>
             </div>
           )}
 
@@ -155,11 +187,19 @@ export default function MinesPage() {
                       : 'You hit a mine.'}
                   </p>
 
-                  <div className="bg-zinc-950 p-4 rounded-lg text-left text-xs font-mono break-all mb-6 border border-zinc-800">
+                  <div className="bg-zinc-950 p-4 rounded-lg text-left text-xs font-mono break-all mb-6 border border-zinc-800 relative group">
                     <div className="text-zinc-500 mb-1 flex items-center gap-1">
                       <ShieldAlert className="w-3 h-3" /> Server Seed (Un-hashed)
                     </div>
-                    <div className="text-zinc-300">{gameState.serverSeed}</div>
+                    <div className="text-zinc-300 pr-8">{gameState.serverSeed}</div>
+
+                    <button
+                      onClick={() => copyToClipboard(gameState.serverSeed || '', setCopiedSeed)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-400 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Copy Server Seed"
+                    >
+                       {copiedSeed ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
                   </div>
 
                   <button
