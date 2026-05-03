@@ -5,7 +5,7 @@ import { useMinesGame } from '@/hooks/useMinesGame';
 import { useWallet } from '@/components/WalletProvider';
 import { motion } from 'framer-motion';
 import { Bomb, Gem, ShieldCheck, ShieldAlert, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function MinesPage() {
   const [copiedHash, setCopiedHash] = useState(false);
@@ -50,14 +50,41 @@ export default function MinesPage() {
   const handleMaxBet = () => setBetAmount(balance);
   const handleHalfBet = () => setBetAmount(Math.floor(balance / 2));
 
+  // Local Game Logs state
+  const [recentPlays, setRecentPlays] = useState<any[]>([]);
+
+  // Track game end
+  useEffect(() => {
+    if (gameState?.isOver) {
+      setRecentPlays(prev => {
+        // Prevent duplicate logging for the same token
+        if (prev.some(play => play.token === gameState.token)) return prev;
+
+        return [
+          {
+            id: Date.now(),
+            token: gameState.token,
+            bet: betAmount,
+            multiplier: gameState.multiplier,
+            payout: gameState.winAmount || 0,
+            isWin: !!gameState.winAmount,
+          },
+          ...prev
+        ].slice(0, 10);
+      });
+    }
+  }, [gameState?.isOver, gameState?.token, gameState?.multiplier, gameState?.winAmount, betAmount]);
+
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950">
       <Header />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 flex flex-col gap-6">
+
+        <div className="flex flex-col lg:flex-row gap-6">
 
         {/* Sidebar Controls */}
-        <div className="w-full lg:w-80 bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex flex-col gap-5">
+        <div className="w-full lg:w-80 bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex flex-col gap-5 order-2 lg:order-1">
 
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-zinc-400">Bet Amount (IDR)</label>
@@ -285,6 +312,46 @@ export default function MinesPage() {
           </div>
 
         </div>
+
+        </div>
+
+        {/* Local Recent Plays Log */}
+        <section className="mt-4 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
+            <h2 className="text-lg font-bold text-zinc-100">Recent Plays</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-zinc-400 min-w-[500px]">
+              <thead className="bg-zinc-950/50 text-xs uppercase font-semibold text-zinc-500">
+                <tr>
+                  <th className="px-4 py-3">Time</th>
+                  <th className="px-4 py-3 text-right">Bet Amount</th>
+                  <th className="px-4 py-3 text-right">Multiplier</th>
+                  <th className="px-4 py-3 text-right">Payout</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {recentPlays.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-zinc-600">No plays yet. Start revealing mines!</td>
+                  </tr>
+                ) : (
+                  recentPlays.map((play) => (
+                    <tr key={play.id} className="hover:bg-zinc-800/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-zinc-300">{new Date(play.id).toLocaleTimeString()}</td>
+                      <td className="px-4 py-3 text-right">Rp{play.bet.toLocaleString('id-ID')}</td>
+                      <td className="px-4 py-3 text-right font-medium text-zinc-300">{play.multiplier.toFixed(2)}x</td>
+                      <td className={`px-4 py-3 text-right font-bold ${play.isWin ? 'text-emerald-500' : 'text-zinc-500'}`}>
+                        {play.isWin ? `+Rp${play.payout.toLocaleString('id-ID')}` : '-Rp' + play.bet.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
       </main>
     </div>
   );

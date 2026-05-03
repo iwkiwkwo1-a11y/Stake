@@ -70,3 +70,38 @@ export function generateBombs(
 
   return Array.from(bombs);
 }
+
+/**
+ * Generates a Dice Roll (0.00 to 100.00) based on provably fair algorithm.
+ *
+ * @param serverSeed The server's secret seed.
+ * @param clientSeed The client's seed.
+ * @param nonce The game nonce.
+ * @returns A float between 0.00 and 100.00, rounded to 2 decimal places.
+ */
+export function generateDiceRoll(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number
+): number {
+  const message = `${clientSeed}:${nonce}:0`;
+  const hash = CryptoJS.HmacSHA256(message, serverSeed).toString(CryptoJS.enc.Hex);
+
+  // We take the first 4 bytes (8 hex chars)
+  const hexChunk = hash.substring(0, 8);
+  const intVal = parseInt(hexChunk, 16);
+
+  // Map to 0 - 100.00
+  const maxRange = Math.pow(2, 32);
+  const randFloat = intVal / maxRange;
+
+  const roll = randFloat * 100.01; // Slightly over 100 to allow reaching 100.00 flat
+
+  // Cap at 100.00
+  let finalRoll = Math.min(roll, 100.00);
+
+  // Format to 2 decimal places
+  finalRoll = Math.floor(finalRoll * 100) / 100;
+
+  return finalRoll;
+}
