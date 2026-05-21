@@ -1,0 +1,358 @@
+'use client';
+
+import { Header } from '@/components/Header';
+import { useMinesGame } from '@/hooks/useMinesGame';
+import { useWallet } from '@/components/WalletProvider';
+import { motion } from 'framer-motion';
+import { Bomb, Gem, ShieldCheck, ShieldAlert, Copy, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+export default function MinesPage() {
+  const [copiedHash, setCopiedHash] = useState(false);
+  const [copiedSeed, setCopiedSeed] = useState(false);
+  const [copiedClient, setCopiedClient] = useState(false);
+
+  const copyToClipboard = async (text: string, setCopiedState: (val: boolean) => void) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedState(true);
+      setTimeout(() => setCopiedState(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
+  const { balance } = useWallet();
+  const {
+    gameState,
+    loading,
+    betAmount,
+    setBetAmount,
+    mineCount,
+    setMineCount,
+    clientSeed,
+    setClientSeed,
+    startGame,
+    revealTile,
+    cashOut,
+    resetGame
+  } = useMinesGame();
+
+  const isPlaying = gameState !== null && !gameState.isOver;
+
+  const handleStart = () => {
+    if (betAmount > balance) {
+      alert("Bet amount exceeds balance");
+      return;
+    }
+    startGame();
+  };
+
+  const handleMaxBet = () => setBetAmount(balance);
+  const handleHalfBet = () => setBetAmount(Math.floor(balance / 2));
+
+  // Local Game Logs state
+  const [recentPlays, setRecentPlays] = useState<any[]>([]);
+
+  // Track game end
+  useEffect(() => {
+    if (gameState?.isOver) {
+      setRecentPlays(prev => {
+        // Prevent duplicate logging for the same token
+        if (prev.some(play => play.token === gameState.token)) return prev;
+
+        return [
+          {
+            id: Date.now(),
+            token: gameState.token,
+            bet: betAmount,
+            multiplier: gameState.multiplier,
+            payout: gameState.winAmount || 0,
+            isWin: !!gameState.winAmount,
+          },
+          ...prev
+        ].slice(0, 10);
+      });
+    }
+  }, [gameState?.isOver, gameState?.token, gameState?.multiplier, gameState?.winAmount, betAmount]);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-zinc-950">
+      <Header />
+
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 flex flex-col gap-6">
+
+        <div className="flex flex-col lg:flex-row gap-6">
+
+        {/* Sidebar Controls */}
+        <div className="w-full lg:w-80 bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex flex-col gap-5 order-2 lg:order-1">
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-zinc-400">Bet Amount (IDR)</label>
+            <div className="flex bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden focus-within:border-emerald-500 transition-colors">
+              <input
+                type="number"
+                value={betAmount}
+                onChange={(e) => setBetAmount(Number(e.target.value))}
+                disabled={isPlaying || loading}
+                className="w-full bg-transparent px-3 py-2 text-zinc-100 outline-none disabled:opacity-50"
+              />
+              <button
+                onClick={handleHalfBet}
+                disabled={isPlaying || loading}
+                className="px-3 py-2 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 border-l border-zinc-700"
+              >
+                1/2
+              </button>
+              <button
+                onClick={handleMaxBet}
+                disabled={isPlaying || loading}
+                className="px-3 py-2 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 disabled:opacity-50 border-l border-zinc-700"
+              >
+                MAX
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-zinc-400">Mines</label>
+            <select
+              value={mineCount}
+              onChange={(e) => setMineCount(Number(e.target.value))}
+              disabled={isPlaying || loading}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-zinc-100 outline-none focus:border-emerald-500 disabled:opacity-50"
+            >
+              {Array.from({ length: 24 }, (_, i) => i + 1).map(num => (
+                <option key={num} value={num}>{num}</option>
+              ))}
+            </select>
+          </div>
+
+          {!isPlaying ? (
+            <button
+              onClick={handleStart}
+              disabled={loading || betAmount < 100 || betAmount > balance}
+              className="mt-2 w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-900 disabled:text-zinc-500 text-zinc-950 font-bold rounded-lg transition-colors text-lg"
+            >
+              Bet
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3 mt-2">
+              <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 flex justify-between items-center">
+                <span className="text-zinc-400 text-sm">Multiplier</span>
+                <span className="font-bold text-emerald-500 text-lg">{gameState.multiplier.toFixed(2)}x</span>
+              </div>
+              <button
+                onClick={cashOut}
+                disabled={loading || gameState.openedTiles.length === 0}
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-900 disabled:text-zinc-500 text-zinc-950 font-bold rounded-lg transition-colors text-lg"
+              >
+                Cash Out
+              </button>
+            </div>
+          )}
+
+          {/* Provably Fair Inputs */}
+          {!isPlaying && (
+            <div className="mt-auto pt-4 border-t border-zinc-800 flex flex-col gap-2">
+               <label className="text-xs font-semibold text-zinc-500">Client Seed (Provably Fair)</label>
+               <div className="flex bg-zinc-950 border border-zinc-800 rounded-md overflow-hidden focus-within:border-emerald-500 transition-colors">
+                 <input
+                   type="text"
+                   value={clientSeed}
+                   onChange={(e) => setClientSeed(e.target.value)}
+                   disabled={isPlaying || loading}
+                   placeholder="Leave empty to auto-generate"
+                   className="w-full bg-transparent px-3 py-2 text-xs text-zinc-300 outline-none disabled:opacity-50"
+                 />
+                 {clientSeed && (
+                   <button
+                     onClick={() => copyToClipboard(clientSeed, setCopiedClient)}
+                     className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border-l border-zinc-700 transition-colors flex items-center justify-center"
+                     title="Copy Client Seed"
+                   >
+                     {copiedClient ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                   </button>
+                 )}
+               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Game Board */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-zinc-900 border border-zinc-800 rounded-xl p-8 relative overflow-hidden">
+
+          {/* Active Game Hash Display */}
+          {isPlaying && (
+            <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 z-10">
+              <div className="flex justify-between items-center bg-zinc-950/80 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400 shadow-lg">
+                 <div className="flex items-center gap-2 overflow-hidden">
+                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                   <span className="truncate max-w-[180px] md:max-w-md">Hash: {gameState.serverSeedHash}</span>
+                 </div>
+                 <button
+                   onClick={() => copyToClipboard(gameState.serverSeedHash, setCopiedHash)}
+                   className="ml-2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-300 transition-colors shrink-0"
+                   title="Copy Server Seed Hash"
+                 >
+                   {copiedHash ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                 </button>
+              </div>
+              <div className="flex justify-between items-center bg-zinc-950/80 backdrop-blur border border-zinc-800 rounded-md px-3 py-2 text-xs font-mono text-zinc-400 shadow-lg">
+                 <div className="flex items-center gap-2 overflow-hidden">
+                   <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+                   <span className="truncate max-w-[180px] md:max-w-md">Seed: {gameState.serverSeed}</span>
+                 </div>
+                 <button
+                   onClick={() => copyToClipboard(gameState.serverSeed || '', setCopiedSeed)}
+                   className="ml-2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-300 transition-colors shrink-0"
+                   title="Copy Un-Hashed Server Seed"
+                 >
+                   {copiedSeed ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                 </button>
+              </div>
+            </div>
+          )}
+
+          {gameState?.isOver && (
+            <div className="absolute z-10 bg-zinc-950/80 inset-0 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl shadow-2xl max-w-md w-full"
+                >
+                  <h2 className={`text-3xl font-black mb-2 ${gameState.winAmount ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {gameState.winAmount ? `${gameState.multiplier.toFixed(2)}x Payout!` : 'Busted!'}
+                  </h2>
+                  <p className="text-zinc-400 mb-6">
+                    {gameState.winAmount
+                      ? `You won Rp${gameState.winAmount.toLocaleString('id-ID')}!`
+                      : 'You hit a mine.'}
+                  </p>
+
+                  <div className="bg-zinc-950 p-4 rounded-lg text-left text-xs font-mono break-all mb-6 border border-zinc-800 relative group">
+                    <div className="text-zinc-500 mb-1 flex items-center gap-1">
+                      <ShieldAlert className="w-3 h-3" /> Server Seed (Un-hashed)
+                    </div>
+                    <div className="text-zinc-300 pr-8">{gameState.serverSeed}</div>
+
+                    <button
+                      onClick={() => copyToClipboard(gameState.serverSeed || '', setCopiedSeed)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-md text-zinc-400 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Copy Server Seed"
+                    >
+                       {copiedSeed ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={resetGame}
+                    className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors"
+                  >
+                    Play Again
+                  </button>
+                </motion.div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-5 gap-2 md:gap-3 w-full max-w-md aspect-square mt-8">
+            {Array.from({ length: 25 }).map((_, index) => {
+              const isOpened = gameState?.openedTiles.includes(index);
+              const isGameOver = gameState?.isOver;
+              const isBomb = gameState?.bombs?.includes(index);
+
+              // Determine tile style
+              let tileClass = "bg-zinc-800 hover:bg-zinc-700 cursor-pointer shadow-[0_4px_0_0_rgb(39,39,42)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_0_rgb(39,39,42)] active:translate-y-1 active:shadow-[0_0px_0_0_rgb(39,39,42)] transition-all rounded-lg md:rounded-xl flex items-center justify-center relative";
+
+              if (isOpened) {
+                tileClass = "bg-zinc-950 border border-zinc-800 shadow-inner rounded-lg md:rounded-xl flex items-center justify-center";
+              } else if (isGameOver) {
+                tileClass = "bg-zinc-900 border border-zinc-800 opacity-50 rounded-lg md:rounded-xl flex items-center justify-center";
+              }
+
+              // Only clickable if playing and not opened
+              const isClickable = isPlaying && !isOpened;
+
+              return (
+                <button
+                  key={index}
+                  onClick={() => isClickable && revealTile(index)}
+                  disabled={!isClickable}
+                  className={tileClass}
+                >
+                  {isOpened && (
+                     <motion.div
+                       initial={{ scale: 0, rotate: -45 }}
+                       animate={{ scale: 1, rotate: 0 }}
+                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                     >
+                       <Gem className="w-6 h-6 md:w-10 md:h-10 text-emerald-400" />
+                     </motion.div>
+                  )}
+
+                  {isGameOver && !isOpened && isBomb && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 0.8 }}
+                    >
+                      <Bomb className="w-6 h-6 md:w-10 md:h-10 text-red-500" />
+                    </motion.div>
+                  )}
+
+                  {isGameOver && !isOpened && !isBomb && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 0.3 }}
+                    >
+                      <Gem className="w-6 h-6 md:w-10 md:h-10 text-emerald-400" />
+                    </motion.div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+        </div>
+
+        </div>
+
+        {/* Local Recent Plays Log */}
+        <section className="mt-4 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
+            <h2 className="text-lg font-bold text-zinc-100">Recent Plays</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-zinc-400 min-w-[500px]">
+              <thead className="bg-zinc-950/50 text-xs uppercase font-semibold text-zinc-500">
+                <tr>
+                  <th className="px-4 py-3">Time</th>
+                  <th className="px-4 py-3 text-right">Bet Amount</th>
+                  <th className="px-4 py-3 text-right">Multiplier</th>
+                  <th className="px-4 py-3 text-right">Payout</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800">
+                {recentPlays.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-zinc-600">No plays yet. Start revealing mines!</td>
+                  </tr>
+                ) : (
+                  recentPlays.map((play) => (
+                    <tr key={play.id} className="hover:bg-zinc-800/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-zinc-300">{new Date(play.id).toLocaleTimeString()}</td>
+                      <td className="px-4 py-3 text-right">Rp{play.bet.toLocaleString('id-ID')}</td>
+                      <td className="px-4 py-3 text-right font-medium text-zinc-300">{play.multiplier.toFixed(2)}x</td>
+                      <td className={`px-4 py-3 text-right font-bold ${play.isWin ? 'text-emerald-500' : 'text-zinc-500'}`}>
+                        {play.isWin ? `+Rp${play.payout.toLocaleString('id-ID')}` : '-Rp' + play.bet.toLocaleString('id-ID')}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  );
+}
